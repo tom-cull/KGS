@@ -1,0 +1,51 @@
+pr_Average Net Price CPY = [pr_Net Sales CPY]/[pr_Sales Qty CPY]
+
+pr_G2N CPY = 
+
+CALCULATE(
+    [G2N],
+    FILTER(
+        ALL('Period'),
+        'Period'[Year] = MAX('Period'[Year]) - 1
+    )
+)
+
+pr_Invoice Sales CPY = 
+
+CALCULATE(
+    [Invoice Sales],
+    FILTER(
+        ALL('Period'),
+        'Period'[Year] = MAX('Period'[Year]) - 1
+    )
+)
+
+pr_Net Sales CPY = [pr_Invoice Sales CPY] + [pr_G2N CPY]
+
+pr_Sales Qty CPY = 
+
+CALCULATE(
+    [Sales Qty],
+    FILTER(
+        ALL('Period'),
+        'Period'[Year] = MAX('Period'[Year]) - 1
+    )
+)
+
+pr_Sales Qty PY = 
+CALCULATE(
+    [Sales Qty],
+    SAMEPERIODLASTYEAR('Period'[Date])
+    )
+Price Realization(baseline)$ = SUMX(ItemTable, iferror(IF([pr_Average Net Price CPY] * [Average Net Price CY] <> 0,([Average Net Price CY]-[pr_Average Net Price CPY]) * ([pr_Sales Qty PY]),0),0))
+
+Price Realization% = [Price Realization$]/[Net Sales CY]
+
+Price Realization$ = SUMX(ItemTable, iferror(IF([pr_Average Net Price CPY] * [Average Net Price CY] <> 0,([Average Net Price CY]-[pr_Average Net Price CPY]) * [Sales Qty],0),0))
+
+SM Due to Volume % = divide([SM Due to Volume $],[Net Sales])
+
+SM Due to Volume $ = SUMX(ItemTable, iferror(([Sales Qty]-[pr_Sales Qty PY]) * divide([SGM],[Sales Qty]),0))
+--IF([Sales Qty] * [pr_Sales Qty PY] <> 0
+
+SM Price Impact = [Price Realization(baseline)$]+[SM Due to Volume $]
