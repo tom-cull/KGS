@@ -1,0 +1,66 @@
+Option Explicit
+
+' Main macro: check each URL in column A, write result in column B
+Sub CheckAmazonURLs()
+    Dim ws As Worksheet
+    Dim lastRow As Long
+    Dim r As Long
+    Dim url As String
+    
+    Set ws = ActiveSheet
+    lastRow = ws.Cells(ws.Rows.Count, "O").End(xlUp).Row
+    
+    Application.ScreenUpdating = False
+    
+    For r = 106 To lastRow
+        url = Trim(ws.Cells(r, "O").Value)
+        If url <> "" Then
+            ws.Cells(r, "p").Value = GetURLStatus(url)
+        Else
+            ws.Cells(r, "p").Value = ""
+        End If
+        DoEvents
+    Next r
+    
+    Application.ScreenUpdating = True
+    MsgBox "URL check complete.", vbInformation
+End Sub
+
+' Returns a simple status: OK / Error / HTTP code
+Private Function GetURLStatus(ByVal url As String) As String
+    Dim http As Object
+    Dim statusCode As Long
+    
+    On Error GoTo ErrHandler
+    
+    If InStr(1, url, "://", vbTextCompare) = 0 Then
+        url = "https://" & url
+    End If
+    
+    Set http = CreateObject("MSXML2.ServerXMLHTTP")
+    http.setTimeouts 3000, 3000, 5000, 5000
+    
+    ' HEAD is usually enough and faster than GET
+    http.Open "GET", url, False
+    http.send
+    
+    statusCode = http.Status
+    
+    Select Case statusCode
+        Case 200
+            GetURLStatus = "OK (200)"
+        Case 301, 302, 303, 307, 308
+            GetURLStatus = "Redirect (" & statusCode & ")"
+        Case 400 To 499
+            GetURLStatus = "Client error (" & statusCode & ")"
+        Case 500 To 599
+            GetURLStatus = "Server error (" & statusCode & ")"
+        Case Else
+            GetURLStatus = "HTTP " & statusCode
+    End Select
+    
+    Exit Function
+
+ErrHandler:
+    GetURLStatus = "Error: " & Err.Number
+End Function
