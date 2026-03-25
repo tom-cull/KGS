@@ -1,17 +1,17 @@
-SELECT [Elec-NatPriceByST].[Address Number], 
-  [Elec-NatPriceByST].[Alpha Name], 
-  [Elec-NatPriceByST].[Channel Name], 
-  [Elec-NatPriceByST].[CC 30], 
+SELECT [Elec-NatPriceByST].[Address Number] as "Customer Number", 
+  [Elec-NatPriceByST].[Alpha Name] as "Customer Name", 
+  --[Elec-NatPriceByST].[Channel Name], 
+  --[Elec-NatPriceByST].[CC 30] as "Price List", 
   [Elec-NatPriceByST].[Price List Name], 
   [Elec-NatPriceByST].[Sch Typ], 
   [Elec-NatPriceByST].[3rd Item Number], 
   Cost.[DW_KIDDE_OSM_ITEM_DIM2(DESCRIPTION)] AS Catnum, 
-    Cost.[DW_KIDDE_OSM_ITEM_DIM2(MODEL)] AS Model, 
-    Cost.[DW_KIDDE_OSM_ITEM_DIM2(TOTALMULTIPACKPCS)] AS [Multi Pack Qty], 
-    [Elec-NatPriceByST].[Factor Value Numeric] AS [Nat Price], 
-    [Elec-NatPriceByST].[Qty From] AS [Nat Qty From], 
-    [Electrical Price List - Customer Exception].[Factor Value Numeric] AS CSP, 
-    [Electrical Price List - Customer Exception].[Qty From] AS [CSP Qty From]
+  Cost.[DW_KIDDE_OSM_ITEM_DIM2(MODEL)] AS Model, 
+  Cost.[DW_KIDDE_OSM_ITEM_DIM2(TOTALMULTIPACKPCS)] AS [Multi Pack Qty], 
+  [Elec-NatPriceByST].[Factor Value Numeric] AS [Nat Price], 
+  [Elec-NatPriceByST].[Qty From] AS [Nat Qty From], 
+  [Electrical Price List - Customer Exception].[Factor Value Numeric] AS "Customer Price", 
+  [Electrical Price List - Customer Exception].[Qty From] AS [Customer Price Qty From]
 FROM ([Elec-NatPriceByST] LEFT JOIN [Electrical Price List - Customer Exception] 
     ON ([Elec-NatPriceByST].[Address Number] = [Electrical Price List - Customer Exception].[Address Number]) 
     AND ([Elec-NatPriceByST].[3rd Item Number] = [Electrical Price List - Customer Exception].[3rd Item Number])) 
