@@ -1,0 +1,16 @@
+SELECT F4072.[Address Number], 
+F0101.[Alpha Name], 
+BadgerBasePrice.[3rd Item Number], 
+BadgerBasePrice.[Factor Value Numeric], 
+BadgerBasePrice.[Sls Cd5], 
+F4072.[Adj Name], 
+F4072.[Factor Value Numeric], 
+F4072.[B C], 
+[BC Names].[BC Descripion], 
+sls_cd5.Description
+FROM ((((BadgerBasePrice INNER JOIN F40941 ON BadgerBasePrice.[Sls Cd5] = F40941.[Item Grp 01]) 
+INNER JOIN F4072 ON F40941.[Item Grp Key ID] = F4072.[Item Grp Key ID]) 
+INNER JOIN [BC Names] ON F4072.[B C] = [BC Names].BC) 
+INNER JOIN sls_cd5 ON BadgerBasePrice.[Sls Cd5] = sls_cd5.Cd5) 
+INNER JOIN F0101 ON F4072.[Address Number] = F0101.[Address Number]
+WHERE (((BadgerBasePrice.[3rd Item Number]) Like "83-100035-001") AND ((F4072.[Adj Name]) Like "103BIGP"));
