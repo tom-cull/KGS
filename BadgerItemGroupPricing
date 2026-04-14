@@ -11,4 +11,4 @@ INNER JOIN F4072 ON F40941.[Item Grp Key ID] = F4072.[Item Grp Key ID])
 INNER JOIN [BC Names] ON F4072.[B C] = [BC Names].BC) 
 INNER JOIN sls_cd5 ON BadgerBasePrice.[Sls Cd5] = sls_cd5.Cd5) 
 INNER JOIN F0101 ON F4072.[Address Number] = F0101.[Address Number]
-WHERE F4072.[Adj Name]) Like "103BIGP";
+WHERE F4072.[Adj Name] Like "103BIGP";
