@@ -1,0 +1,108 @@
+# Run PowerShell as STA for Office COM stability:
+# powershell.exe -STA
+
+$folder = "C:\Users\culltom1.KGS\OneDrive - Walter Kidde Portable Equipment\Kidde Revenue Management Team - Documents\General\JIA\Rep JIA\2026\Kidde"
+
+# --- COM Message Filter (IMessageFilter) to auto-retry "Call was rejected by callee" ---
+Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+
+[ComImport, Guid("00000016-0000-0000-C000-000000000046"),
+ InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+interface IMessageFilter
+{
+    int HandleInComingCall(int dwCallType, IntPtr hTaskCaller, int dwTickCount, IntPtr lpInterfaceInfo);
+    int RetryRejectedCall(IntPtr hTaskCallee, int dwTickCount, int dwRejectType);
+    int MessagePending(IntPtr hTaskCallee, int dwTickCount, int dwPendingType);
+}
+
+class MessageFilter : IMessageFilter
+{
+    // Accept the call
+    public int HandleInComingCall(int dwCallType, IntPtr hTaskCaller, int dwTickCount, IntPtr lpInterfaceInfo) { return 0; }
+
+    // If rejected, retry after a short delay (return milliseconds)
+    public int RetryRejectedCall(IntPtr hTaskCallee, int dwTickCount, int dwRejectType)
+    {
+        // dwRejectType == 2 is SERVERCALL_RETRYLATER
+        if (dwRejectType == 2) return 250;
+        return -1; // cancel otherwise
+    }
+
+    // Continue waiting
+    public int MessagePending(IntPtr hTaskCallee, int dwTickCount, int dwPendingType) { return 2; }
+}
+
+public class ComMessageFilter
+{
+    [DllImport("ole32.dll")]
+    private static extern int CoRegisterMessageFilter(IMessageFilter newFilter, out IMessageFilter oldFilter);
+
+    private static IMessageFilter _oldFilter;
+
+    public static void Register()
+    {
+        IMessageFilter newFilter = new MessageFilter();
+        CoRegisterMessageFilter(newFilter, out _oldFilter);
+    }
+
+    public static void Revoke()
+    {
+        IMessageFilter dummy;
+        CoRegisterMessageFilter(_oldFilter, out dummy);
+    }
+}
+"@
+
+function Invoke-WithRetry {
+    param(
+        [scriptblock]$Action,
+        [int]$MaxAttempts = 10,
+        [int]$DelayMs = 300
+    )
+    for ($i=1; $i -le $MaxAttempts; $i++) {
+        try {
+            return & $Action
+        } catch [System.Runtime.InteropServices.COMException] {
+            # 0x80010001 = RPC_E_CALL_REJECTED
+            if ($_.Exception.HResult -eq -2147418111 -or $_.Exception.Message -match "RPC_E_CALL_REJECTED") {
+                Start-Sleep -Milliseconds $DelayMs
+                continue
+            }
+            throw
+        }
+    }
+    throw "Exceeded retry attempts for COM call."
+}
+
+# Register message filter (STA only)
+[ComMessageFilter]::
+
+$word = New-Object -ComObject Word.Application
+$word.Visible = $false
+$word.DisplayAlerts = 0  # wdAlertsNone
+
+Get-ChildItem $folder -Recurse -Include *.doc, *.docx | ForEach-Object {
+    $in = $_.FullName
+    $out = [System.IO.Path]::ChangeExtension($in, "pdf")
+
+    Invoke-WithRetry {
+        # Open as ReadOnly to avoid template/save prompts. Arguments are positional for COM:
+        # Open(FileName, ConfirmConversions, ReadOnly, AddToRecentFiles, PasswordDocument, PasswordTemplate, Revert, WritePasswordDocument, WritePasswordTemplate, Format, Encoding, Visible, OpenAndRepair)
+        $doc = $word.Documents.Open($in, $false, $true, $false)
+        try {
+            # 17 = wdFormatPDF
+            $doc.SaveAs([ref]$out, [ref]17)
+        } finally {
+            $doc.Close([ref]$false) | Out-Null
+            [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($doc)
+        }
+    }
+}
+
+$word.Quit()
+[void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($word)
+
+# Revoke message filter
+[ComMessageFilter]::
