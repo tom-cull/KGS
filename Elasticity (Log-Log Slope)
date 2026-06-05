@@ -1,0 +1,36 @@
+Elasticity (Log-Log Slope) = 
+VAR DataSet1 =
+    ADDCOLUMNS (
+        SUMMARIZE (
+            'Price Elasticity',
+            'Price Elasticity'[Year-Week],
+            'Price Elasticity'[3rd Item Number],
+            'Price Elasticity'[Channel Description]
+        ),
+        "Q",
+            CALCULATE ( SUM ( 'Price Elasticity'[Qty] ) ),
+        "P",
+            CALCULATE (
+                DIVIDE (
+                    SUMX ( 'Price Elasticity', 'Price Elasticity'[ASP] * 'Price Elasticity'[Qty] ),
+                    SUM ( 'Price Elasticity'[Qty] )
+                )
+            ),
+        "LnQ",
+            VAR q = CALCULATE ( SUM ( 'Price Elasticity'[Qty] ) )
+            RETURN IF ( q > 0, LN ( q ), BLANK () ),
+        "LnP",
+            VAR p = CALCULATE (
+                    DIVIDE (
+                        SUMX ( 'Price Elasticity', 'Price Elasticity'[ASP] * 'Price Elasticity'[Qty] ),
+                        SUM ( 'Price Elasticity'[Qty] )
+                    )
+                )
+            RETURN IF ( p > 0, LN ( p * 100 ), BLANK () )
+    )
+VAR DataSet2 =
+    FILTER ( DataSet1, NOT ISBLANK ( [LnQ] ) && NOT ISBLANK ( [LnP] ) )
+VAR RegTable =
+    LINESTX ( DataSet2, [LnQ], [LnP] )
+RETURN
+    MAXX ( RegTable, [Slope1] )
