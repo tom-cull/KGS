@@ -3,12 +3,12 @@ VAR DataSet1 =
     ADDCOLUMNS (
         SUMMARIZE (
             'Price Elasticity',
-            'Price Elasticity'[Year-Week],
+            'Price Elasticity'[ASP (.05)],
             'Price Elasticity'[3rd Item Number],
             'Price Elasticity'[Channel Description]
         ),
         "Q",
-            CALCULATE ( SUM ( 'Price Elasticity'[Qty] ) ),
+            CALCULATE ( divide( SUM ( 'Price Elasticity'[Qty] ) , DISTINCTCOUNT('Price Elasticity'[Year-Week]))),
         "P",
             CALCULATE (
                 DIVIDE (
@@ -17,7 +17,7 @@ VAR DataSet1 =
                 )
             ),
         "LnQ",
-            VAR q = CALCULATE ( SUM ( 'Price Elasticity'[Qty] ) )
+            VAR q = CALCULATE ( divide( SUM ( 'Price Elasticity'[Qty] ) , DISTINCTCOUNT('Price Elasticity'[Year-Week])))
             RETURN IF ( q > 0, LN ( q ), BLANK () ),
         "LnP",
             VAR p = CALCULATE (
@@ -28,9 +28,19 @@ VAR DataSet1 =
                 )
             RETURN IF ( p > 0, LN ( p * 100 ), BLANK () )
     )
+
+
+
+VAR P_Low = PERCENTILEX.INC(DataSet1, [P], 0.05)
+VAR P_High = PERCENTILEX.INC(DataSet1, [P], 0.95)
 VAR DataSet2 =
-    FILTER ( DataSet1, NOT ISBLANK ( [LnQ] ) && NOT ISBLANK ( [LnP] ) )
+    FILTER(
+        DataSet1,
+        [P] >= P_Low &&
+        [P] <= P_High &&
+        [Q] > 0
+    )
 VAR RegTable =
-    LINESTX ( DataSet2, [LnQ], [LnP] )
+    LINESTX ( DataSet1, [LnQ], [LnP] )
 RETURN
-    MAXX ( RegTable, [Slope1] )
+MAXX ( RegTable, [Slope1] )
